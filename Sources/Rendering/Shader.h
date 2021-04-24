@@ -6,16 +6,16 @@
 #include <string>
 #include <vector>
 
+enum class EShaderType
+{
+	VertexShader,
+	FragmentShader,
+	GeometryShader,
+	Unknown
+};
+
 class Shader
 {
-	enum class EShaderType
-	{
-		VertexShader,
-		FragmentShader,
-		GeometryShader,
-		Unknown
-	};
-
 public:
     Shader(const char* vsPath, const char* fsPath, const char* gsPath = nullptr);
 
