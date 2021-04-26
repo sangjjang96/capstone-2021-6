@@ -43,6 +43,15 @@ public:
    glm::vec3 GetColor() const { return m_color; }
    void SetColor(const glm::vec3& newColor) { m_color = newColor; }
 
+   float GetPositionX() const { return m_position.x; }
+   void SetPositionX(const float& newX) { m_position.x = newX; }
+
+   float GetPositionY() const { return m_position.y; }
+   void SetPositionY(const float& newY) { m_position.y = newY; }
+
+   float GetPositionZ() const { return m_position.z; }
+   void SetPositionZ(const float& newZ) { m_position.z = newZ; }
+
 private:
    glm::vec3 m_position;
    glm::vec3 m_color;

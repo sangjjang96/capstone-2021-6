@@ -9,6 +9,7 @@
 class Shader;
 class Model;
 class Camera;
+class Light;
 class GBuffer;
 class Renderer
 {
@@ -100,8 +101,6 @@ private:
 
 	bool m_bShadows;
 
-	std::vector<glm::vec3> m_lightPos;
-	std::vector<glm::vec3> m_lightColor;
 	glm::vec3 m_objPos;
 	glm::vec3 m_planePos;
 
@@ -112,6 +111,6 @@ private:
 	GBuffer* m_GBuffer;
 
 	Model* m_mainModel;
-
 	Camera* m_camera;
+	Light* m_mainLight;
 };
