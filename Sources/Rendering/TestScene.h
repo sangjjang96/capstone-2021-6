@@ -10,7 +10,7 @@ public:
 	TestScene() :
 		m_mainEntity(nullptr),
 		m_mainLight(nullptr),
-		m_backpack(nullptr)
+		m_sponza(nullptr)
 	{
 	}
 
@@ -19,5 +19,5 @@ public:
 private:
 	Entity* m_mainEntity;
 	Light* m_mainLight;
-	Model* m_backpack;
+	Model* m_sponza;
 };

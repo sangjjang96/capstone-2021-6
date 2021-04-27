@@ -122,7 +122,7 @@ void Renderer::StartRenderer(unsigned int width, unsigned int height, Scene& sce
 	m_GBuffer = new GBuffer(width, height);
 	m_GBuffer->Init();
 
-	m_camera = new Camera(glm::vec3(0.0f, 0.0f, 5.0f));
+	m_camera = new Camera(glm::vec3(0.0f, 200.0f, 100.0f));
 	m_Entities = m_Scene->GetEntities();
 	m_Lights = m_Scene->GetLights();
 
@@ -213,7 +213,7 @@ void Renderer::GeometryPass()
 
 	m_GBuffer->SetFrameBuffer();
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	glm::mat4 projection = glm::perspective(glm::radians(m_camera->m_ZOOM), (float)m_winWidth / (float)m_winHeight, 0.1f, 100.0f);
+	glm::mat4 projection = glm::perspective(glm::radians(m_camera->m_ZOOM), (float)m_winWidth / (float)m_winHeight, 0.1f, 2000.0f);
 	glm::mat4 view = m_camera->GetViewMatrix();
 	glm::mat4 model = glm::mat4(1.0f);
 	m_geometryShader->UseProgram();
@@ -228,7 +228,7 @@ void Renderer::GeometryPass()
 void Renderer::ShadowPass()
 {
 	// Set Shadow Pass
-	float near_plane = 0.1f, far_plane = 100.0f;
+	float near_plane = 0.1f, far_plane = 2000.0f;
 	glm::mat4 shadowProj = glm::perspective(glm::radians(90.0f), (float)m_shadowWidth / (float)m_shadowHeight, near_plane, far_plane);
 	std::vector<glm::mat4> shadowTransforms;
 	shadowTransforms.push_back(shadowProj * glm::lookAt(m_Lights[0]->GetPosition(), m_Lights[0]->GetPosition() + glm::vec3(1.0f, 0.0f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f)));
@@ -299,12 +299,12 @@ void Renderer::RenderScene(Shader& shader)
 		m_Entities[i]->Render(shader);
 	}
 
-	model = glm::translate(model, m_planePos);
-	model = glm::scale(model, glm::vec3(1.0f));
-	shader.SetMat4("modelMatrix", model);
-	glBindVertexArray(m_planeVAO);
-	glDrawArrays(GL_TRIANGLES, 0, 6);
-	glBindVertexArray(0);
+	//model = glm::translate(model, m_planePos);
+	//model = glm::scale(model, glm::vec3(1.0f));
+	//shader.SetMat4("modelMatrix", model);
+	//glBindVertexArray(m_planeVAO);
+	//glDrawArrays(GL_TRIANGLES, 0, 6);
+	//glBindVertexArray(0);
 }
 
 void Renderer::RenderQuad()
