@@ -10,6 +10,8 @@ public:
    Scene() = default;
    virtual ~Scene();
 
+   virtual void Init() = 0;
+
    Entity& CreateEntity(const std::string_view name);
    Light& CreateLight();
 

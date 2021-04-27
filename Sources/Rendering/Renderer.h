@@ -9,6 +9,8 @@
 class Shader;
 class Model;
 class Camera;
+class Scene;
+class Entity;
 class Light;
 class GBuffer;
 class Renderer
@@ -18,7 +20,7 @@ public:
 
 	~Renderer();
 
-	void StartRenderer(unsigned int width, unsigned int height);
+	void StartRenderer(unsigned int width, unsigned int height, Scene& scene);
 
 	void Render()
 	{
@@ -99,6 +101,9 @@ private:
 	unsigned int m_depthMapFBO;
 	unsigned int m_depthCubemap;
 
+	unsigned int m_entityNum;
+	unsigned int m_lightNum;
+
 	bool m_bShadows;
 
 	glm::vec3 m_objPos;
@@ -109,8 +114,9 @@ private:
 	Shader* m_shadowShader;
 
 	GBuffer* m_GBuffer;
-
-	Model* m_mainModel;
+	
+	Scene* m_Scene;
+	std::vector<Entity*> m_Entities;
 	Camera* m_camera;
-	Light* m_mainLight;
+	std::vector<Light*> m_Lights;
 };

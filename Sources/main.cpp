@@ -3,6 +3,7 @@
 #endif
 
 #include "Core/Application.h"
+#include "Rendering/TestScene.h"
 
 int main()
 {
@@ -13,7 +14,8 @@ int main()
 #endif
 
    Application* app = new Application("Lit", 1200, 800);
-   int res = app->Run();
+   Scene* scene = new TestScene();
+   int res = app->Run(*scene);
    delete app;
    app = nullptr;
 

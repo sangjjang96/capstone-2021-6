@@ -1,5 +1,6 @@
 #include "Application.h"
 #include "../Rendering/Renderer.h"
+#include "../Rendering/Scene.h"
 
 #include <GL/gl3w.h>
 #include <GLFW/glfw3.h>
@@ -38,7 +39,7 @@ Application::~Application()
 	}
 }
 
-int Application::Run()
+int Application::Run(Scene& scene)
 {
 	glfwInit();
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
@@ -65,7 +66,7 @@ int Application::Run()
 	glEnable(GL_DEPTH_TEST);
 
 	m_renderer = new Renderer();
-	m_renderer->StartRenderer(m_winWidth, m_winHeight);
+	m_renderer->StartRenderer(m_winWidth, m_winHeight, scene);
 
 	while (!glfwWindowShouldClose(m_window))
 	{

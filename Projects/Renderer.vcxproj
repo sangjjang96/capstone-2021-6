@@ -21,6 +21,7 @@
     <ClCompile Include="..\Sources\Rendering\Renderer.cpp" />
     <ClCompile Include="..\Sources\Rendering\Scene.cpp" />
     <ClCompile Include="..\Sources\Rendering\Shader.cpp" />
+    <ClCompile Include="..\Sources\Rendering\TestScene.cpp" />
     <ClCompile Include="..\Thirdparty\gl3w\includes\GL\gl3w.c" />
     <ClCompile Include="..\Thirdparty\glm\includes\glm\detail\glm.cpp" />
     <ClCompile Include="..\Thirdparty\imgui\includes\imgui\imgui.cpp" />
@@ -42,6 +43,7 @@
     <ClInclude Include="..\Sources\Rendering\Renderer.h" />
     <ClInclude Include="..\Sources\Rendering\Scene.h" />
     <ClInclude Include="..\Sources\Rendering\Shader.h" />
+    <ClInclude Include="..\Sources\Rendering\TestScene.h" />
     <ClInclude Include="..\Thirdparty\assimp\ai_assert.h" />
     <ClInclude Include="..\Thirdparty\assimp\anim.h" />
     <ClInclude Include="..\Thirdparty\assimp\camera.h" />

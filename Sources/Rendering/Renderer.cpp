@@ -5,6 +5,8 @@
 #include "Renderer.h"
 #include "Camera.h"
 #include "Shader.h"
+#include "Scene.h"
+#include "Entity.h"
 #include "Model.h"
 #include "Light.h"
 #include "GBuffer.h"
@@ -25,9 +27,14 @@ Renderer::Renderer() :
 	m_depthMapFBO(0),
 	m_depthCubemap(0),
 
+	m_entityNum(0),
+	m_lightNum(0),
+
 	m_objPos(0),
 
 	m_bShadows(false),
+
+	m_Scene(nullptr),
 
 	m_geometryShader(nullptr),
 	m_lightShader(nullptr),
@@ -35,9 +42,9 @@ Renderer::Renderer() :
 
 	m_GBuffer(nullptr),
 
-	m_mainModel(nullptr),
 	m_camera(nullptr),
-	m_mainLight(nullptr)
+	m_Entities(0),
+	m_Lights(0)
 {
 }
 
@@ -67,10 +74,10 @@ Renderer::~Renderer()
 		m_GBuffer = nullptr;
 	}
 
-	if (m_mainModel != nullptr)
+	if (m_Scene != nullptr)
 	{
-		delete m_mainModel;
-		m_mainModel = nullptr;
+		delete m_Scene;
+		m_Scene = nullptr;
 	}
 
 	if (m_camera != nullptr)
@@ -79,19 +86,34 @@ Renderer::~Renderer()
 		m_camera = nullptr;
 	}
 
-	if (m_mainLight != nullptr)
+	for (auto& entity : m_Entities)
 	{
-		delete m_mainLight;
-		m_mainLight = nullptr;
+		if (entity != nullptr)
+		{
+			delete entity;
+			entity = nullptr;
+		}
+	}
+
+	for (auto& light : m_Lights)
+	{
+		if (light != nullptr)
+		{
+			delete light;
+			light = nullptr;
+		}
 	}
 }
 
 // Set up Framebuffer object, Shader, Main Object and Screen Fill Quad
-void Renderer::StartRenderer(unsigned int width, unsigned int height)
+void Renderer::StartRenderer(unsigned int width, unsigned int height, Scene& scene)
 {
 	// Set Parameters
 	m_winWidth = width;
 	m_winHeight = height;
+
+	m_Scene = &scene;
+	m_Scene->Init();
 
 	m_geometryShader = new Shader("../Resources/Shaders/GeometryPass.vs", "../Resources/Shaders/GeometryPass.fs");
 	m_lightShader = new Shader("../Resources/Shaders/LightPass.vs", "../Resources/Shaders/LightPass.fs");
@@ -100,9 +122,9 @@ void Renderer::StartRenderer(unsigned int width, unsigned int height)
 	m_GBuffer = new GBuffer(width, height);
 	m_GBuffer->Init();
 
-	m_camera = new Camera(glm::vec3(0.0f, 0.0f, 10.0f));
-	m_mainModel = new Model("../Resources/resources/objects/backpack/backpack.obj");
-	m_mainLight = new Light(glm::vec3(0.0f, 5.0f, 0.0f), glm::vec3(30.0f, 19.0f, 10.0f));
+	m_camera = new Camera(glm::vec3(0.0f, 0.0f, 5.0f));
+	m_Entities = m_Scene->GetEntities();
+	m_Lights = m_Scene->GetLights();
 
 	// Set Objects
 	glm::vec3 objPos = glm::vec3(0.0f, 0.0f, 0.0f);
@@ -191,7 +213,7 @@ void Renderer::GeometryPass()
 
 	m_GBuffer->SetFrameBuffer();
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	glm::mat4 projection = glm::perspective(glm::radians(m_camera->m_ZOOM), (float)m_winWidth / (float)m_winHeight, 0.001f, 100.0f);
+	glm::mat4 projection = glm::perspective(glm::radians(m_camera->m_ZOOM), (float)m_winWidth / (float)m_winHeight, 0.1f, 100.0f);
 	glm::mat4 view = m_camera->GetViewMatrix();
 	glm::mat4 model = glm::mat4(1.0f);
 	m_geometryShader->UseProgram();
@@ -209,12 +231,12 @@ void Renderer::ShadowPass()
 	float near_plane = 0.1f, far_plane = 100.0f;
 	glm::mat4 shadowProj = glm::perspective(glm::radians(90.0f), (float)m_shadowWidth / (float)m_shadowHeight, near_plane, far_plane);
 	std::vector<glm::mat4> shadowTransforms;
-	shadowTransforms.push_back(shadowProj * glm::lookAt(m_mainLight->GetPosition(), m_mainLight->GetPosition() + glm::vec3(1.0f, 0.0f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f)));
-	shadowTransforms.push_back(shadowProj * glm::lookAt(m_mainLight->GetPosition(), m_mainLight->GetPosition() + glm::vec3(-1.0f, 0.0f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f)));
-	shadowTransforms.push_back(shadowProj * glm::lookAt(m_mainLight->GetPosition(), m_mainLight->GetPosition() + glm::vec3(0.0f, 1.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f)));
-	shadowTransforms.push_back(shadowProj * glm::lookAt(m_mainLight->GetPosition(), m_mainLight->GetPosition() + glm::vec3(0.0f, -1.0f, 0.0f), glm::vec3(0.0f, 0.0f, -1.0f)));
-	shadowTransforms.push_back(shadowProj * glm::lookAt(m_mainLight->GetPosition(), m_mainLight->GetPosition() + glm::vec3(0.0f, 0.0f, 1.0f), glm::vec3(0.0f, -1.0f, 0.0f)));
-	shadowTransforms.push_back(shadowProj * glm::lookAt(m_mainLight->GetPosition(), m_mainLight->GetPosition() + glm::vec3(0.0f, 0.0f, -1.0f), glm::vec3(0.0f, -1.0f, 0.0f)));
+	shadowTransforms.push_back(shadowProj * glm::lookAt(m_Lights[0]->GetPosition(), m_Lights[0]->GetPosition() + glm::vec3(1.0f, 0.0f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f)));
+	shadowTransforms.push_back(shadowProj * glm::lookAt(m_Lights[0]->GetPosition(), m_Lights[0]->GetPosition() + glm::vec3(-1.0f, 0.0f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f)));
+	shadowTransforms.push_back(shadowProj * glm::lookAt(m_Lights[0]->GetPosition(), m_Lights[0]->GetPosition() + glm::vec3(0.0f, 1.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f)));
+	shadowTransforms.push_back(shadowProj * glm::lookAt(m_Lights[0]->GetPosition(), m_Lights[0]->GetPosition() + glm::vec3(0.0f, -1.0f, 0.0f), glm::vec3(0.0f, 0.0f, -1.0f)));
+	shadowTransforms.push_back(shadowProj * glm::lookAt(m_Lights[0]->GetPosition(), m_Lights[0]->GetPosition() + glm::vec3(0.0f, 0.0f, 1.0f), glm::vec3(0.0f, -1.0f, 0.0f)));
+	shadowTransforms.push_back(shadowProj * glm::lookAt(m_Lights[0]->GetPosition(), m_Lights[0]->GetPosition() + glm::vec3(0.0f, 0.0f, -1.0f), glm::vec3(0.0f, -1.0f, 0.0f)));
 
 	glViewport(0, 0, m_shadowWidth, m_shadowHeight);
 	glBindFramebuffer(GL_FRAMEBUFFER, m_depthMapFBO);
@@ -225,7 +247,7 @@ void Renderer::ShadowPass()
 		m_shadowShader->SetMat4("shadowMatrices[" + std::to_string(i) + "]", shadowTransforms[i]);
 	}
 	m_shadowShader->SetFloat("far_plane", far_plane);
-	m_shadowShader->SetVec3("lightPos", m_mainLight->GetPosition());
+	m_shadowShader->SetVec3("lightPos", m_Lights[0]->GetPosition());
 
 	RenderScene(*m_shadowShader);
 
@@ -253,11 +275,11 @@ void Renderer::LightPass()
 
 	for (unsigned int i = 0; i < 4; i++)
 	{
-		m_lightShader->SetVec3("light[" + std::to_string(i) + "].Position", m_mainLight->GetPosition());
-		m_lightShader->SetVec3("light[" + std::to_string(i) + "].Color", m_mainLight->GetColor());
+		m_lightShader->SetVec3("light[" + std::to_string(i) + "].Position", m_Lights[0]->GetPosition());
+		m_lightShader->SetVec3("light[" + std::to_string(i) + "].Color", m_Lights[0]->GetColor());
 
 		model = glm::mat4(1.0f);
-		model = glm::translate(model, m_mainLight->GetPosition());
+		model = glm::translate(model, m_Lights[0]->GetPosition());
 	}
 
 	RenderQuad();
@@ -271,8 +293,11 @@ void Renderer::RenderScene(Shader& shader)
 	model = glm::mat4(1.0f);
 	model = glm::translate(model, m_objPos);
 	model = glm::scale(model, glm::vec3(0.5f));
-	shader.SetMat4("modelMatrix", model);
-	m_mainModel->Draw(shader);
+	for (unsigned int i = 0; i < m_Entities.size(); ++i)
+	{
+		m_Entities[i]->SetTransform(model);
+		m_Entities[i]->Render(shader);
+	}
 
 	model = glm::translate(model, m_planePos);
 	model = glm::scale(model, glm::vec3(1.0f));
@@ -309,39 +334,57 @@ void Renderer::processInput(GLFWwindow* window, float deltaTime)
 	// KEYBOARD U H J K (Light Movement)
 	if (glfwGetKey(window, GLFW_KEY_U) == GLFW_PRESS)
 	{
-		float y = m_mainLight->GetPositionY();
-		m_mainLight->SetPositionY(y += velocity);
+		for (unsigned int i = 0; i < m_Lights.size(); ++i)
+		{
+			float y = m_Lights[i]->GetPositionY();
+			m_Lights[i]->SetPositionY(y += velocity);
+		}
 	}
 
 	if (glfwGetKey(window, GLFW_KEY_J) == GLFW_PRESS)
 	{
-		float y = m_mainLight->GetPositionY();
-		m_mainLight->SetPositionY(y -= velocity);
+		for (unsigned int i = 0; i < m_Lights.size(); ++i)
+		{
+			float y = m_Lights[i]->GetPositionY();
+			m_Lights[i]->SetPositionY(y -= velocity);
+		}
 	}
 
 	if (glfwGetKey(window, GLFW_KEY_H) == GLFW_PRESS)
 	{
-		float x = m_mainLight->GetPositionX();
-		m_mainLight->SetPositionX(x += velocity);
+		for (unsigned int i = 0; i < m_Lights.size(); ++i)
+		{
+			float x = m_Lights[i]->GetPositionX();
+			m_Lights[i]->SetPositionX(x -= velocity);
+		}
 	}
 
 	if (glfwGetKey(window, GLFW_KEY_K) == GLFW_PRESS)
 	{
-		float x = m_mainLight->GetPositionX();
-		m_mainLight->SetPositionX(x -= velocity);
+		for (unsigned int i = 0; i < m_Lights.size(); ++i)
+		{
+			float x = m_Lights[i]->GetPositionX();
+			m_Lights[i]->SetPositionX(x += velocity);
+		}
 	}
 
 	// KEYBOARD F N (Light Distance Movement)
 	if (glfwGetKey(window, GLFW_KEY_F) == GLFW_PRESS)
 	{
-		float z = m_mainLight->GetPositionZ();
-		m_mainLight->SetPositionZ(z += velocity);
+		for (unsigned int i = 0; i < m_Lights.size(); ++i)
+		{
+			float z = m_Lights[i]->GetPositionZ();
+			m_Lights[i]->SetPositionZ(z += velocity);
+		}
 	}
 
 	if (glfwGetKey(window, GLFW_KEY_N) == GLFW_PRESS)
 	{
-		float z = m_mainLight->GetPositionZ();
-		m_mainLight->SetPositionZ(z -= velocity);
+		for (unsigned int i = 0; i < m_Lights.size(); ++i)
+		{
+			float z = m_Lights[i]->GetPositionZ();
+			m_Lights[i]->SetPositionZ(z -= velocity);
+		}
 	}
 
 	// Reset Cam and LightPos
@@ -349,7 +392,8 @@ void Renderer::processInput(GLFWwindow* window, float deltaTime)
 	{
 		m_camera->SetPos(glm::vec3(0.0f, 0.0f, 5.0f));
 
-		m_mainLight->SetPosition(glm::vec3(0.0f, 5.0f, 0.0f));
+		for (unsigned int i = 0; i < m_Lights.size(); ++i)
+			m_Lights[i]->SetPosition(glm::vec3(0.0f, 5.0f, 0.0f));
 	}
 
 	// Set Shadow On/Off
