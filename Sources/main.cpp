@@ -15,6 +15,7 @@ int main()
 
    Application* app = new Application("Lit", 1200, 800);
    Scene* scene = new TestScene();
+   scene->Init();
    int res = app->Run(*scene);
    delete app;
    app = nullptr;

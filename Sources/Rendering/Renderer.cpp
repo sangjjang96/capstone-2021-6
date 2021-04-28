@@ -21,9 +21,6 @@ Renderer::Renderer() :
 	m_quadVAO(0),
 	m_quadVBO(0),
 
-	m_planeVAO(0),
-	m_planeVBO(0),
-
 	m_depthMapFBO(0),
 	m_depthCubemap(0),
 
@@ -34,17 +31,11 @@ Renderer::Renderer() :
 
 	m_bShadows(false),
 
-	m_Scene(nullptr),
-
 	m_geometryShader(nullptr),
 	m_lightShader(nullptr),
 	m_shadowShader(nullptr),
 
-	m_GBuffer(nullptr),
-
-	m_camera(nullptr),
-	m_Entities(0),
-	m_Lights(0)
+	m_GBuffer(nullptr)
 {
 }
 
@@ -73,47 +64,14 @@ Renderer::~Renderer()
 		delete m_GBuffer;
 		m_GBuffer = nullptr;
 	}
-
-	if (m_Scene != nullptr)
-	{
-		delete m_Scene;
-		m_Scene = nullptr;
-	}
-
-	if (m_camera != nullptr)
-	{
-		delete m_camera;
-		m_camera = nullptr;
-	}
-
-	for (auto& entity : m_Entities)
-	{
-		if (entity != nullptr)
-		{
-			delete entity;
-			entity = nullptr;
-		}
-	}
-
-	for (auto& light : m_Lights)
-	{
-		if (light != nullptr)
-		{
-			delete light;
-			light = nullptr;
-		}
-	}
 }
 
 // Set up Framebuffer object, Shader, Main Object and Screen Fill Quad
-void Renderer::StartRenderer(unsigned int width, unsigned int height, Scene& scene)
+void Renderer::StartRenderer(unsigned int width, unsigned int height)
 {
 	// Set Parameters
 	m_winWidth = width;
 	m_winHeight = height;
-
-	m_Scene = &scene;
-	m_Scene->Init();
 
 	m_geometryShader = new Shader("../Resources/Shaders/GeometryPass.vs", "../Resources/Shaders/GeometryPass.fs");
 	m_lightShader = new Shader("../Resources/Shaders/LightPass.vs", "../Resources/Shaders/LightPass.fs");
@@ -122,31 +80,15 @@ void Renderer::StartRenderer(unsigned int width, unsigned int height, Scene& sce
 	m_GBuffer = new GBuffer(width, height);
 	m_GBuffer->Init();
 
-	m_camera = new Camera(glm::vec3(0.0f, 200.0f, 100.0f));
-	m_Entities = m_Scene->GetEntities();
-	m_Lights = m_Scene->GetLights();
-
 	// Set Objects
 	glm::vec3 objPos = glm::vec3(0.0f, 0.0f, 0.0f);
-	glm::vec3 planePos = glm::vec3(0.0f, -5.0f, 0.0f);
 	m_objPos = objPos;
-	m_planePos = planePos;
 
 	float quadVertices[] = {
 		-1.0f,  1.0f, 0.0f, 0.0f, 1.0f,
 		-1.0f, -1.0f, 0.0f, 0.0f, 0.0f,
 		 1.0f,  1.0f, 0.0f, 1.0f, 1.0f,
 		 1.0f, -1.0f, 0.0f, 1.0f, 0.0f,
-	};
-
-	float planeVertices[] = {
-		 25.0f, -0.5f,  25.0f,  0.0f, 1.0f, 0.0f,  25.0f,  0.0f,
-		-25.0f, -0.5f,  25.0f,  0.0f, 1.0f, 0.0f,   0.0f,  0.0f,
-		-25.0f, -0.5f, -25.0f,  0.0f, 1.0f, 0.0f,   0.0f, 25.0f,
-
-		 25.0f, -0.5f,  25.0f,  0.0f, 1.0f, 0.0f,  25.0f,  0.0f,
-		-25.0f, -0.5f, -25.0f,  0.0f, 1.0f, 0.0f,   0.0f, 25.0f,
-		 25.0f, -0.5f, -25.0f,  0.0f, 1.0f, 0.0f,  25.0f, 25.0f
 	};
 
 	glGenVertexArrays(1, &m_quadVAO);
@@ -158,19 +100,6 @@ void Renderer::StartRenderer(unsigned int width, unsigned int height, Scene& sce
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
 	glEnableVertexAttribArray(1);
 	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
-	glBindVertexArray(0);
-
-	glGenVertexArrays(1, &m_planeVAO);
-	glGenBuffers(1, &m_planeVBO);
-	glBindVertexArray(m_planeVAO);
-	glBindBuffer(GL_ARRAY_BUFFER, m_planeVBO);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(planeVertices), planeVertices, GL_STATIC_DRAW);
-	glEnableVertexAttribArray(0);
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
-	glEnableVertexAttribArray(1);
-	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
-	glEnableVertexAttribArray(2);
-	glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
 	glBindVertexArray(0);
 
 	// Set Shadow
@@ -205,7 +134,7 @@ void Renderer::StartRenderer(unsigned int width, unsigned int height, Scene& sce
 	m_lightShader->SetInt("depthMap", 3);
 }
 
-void Renderer::GeometryPass()
+void Renderer::GeometryPass(Scene& scene)
 {
 	// Set Geometry Pass
 	glViewport(0, 0, m_winWidth, m_winHeight);
@@ -213,30 +142,30 @@ void Renderer::GeometryPass()
 
 	m_GBuffer->SetFrameBuffer();
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	glm::mat4 projection = glm::perspective(glm::radians(m_camera->m_ZOOM), (float)m_winWidth / (float)m_winHeight, 0.1f, 2000.0f);
-	glm::mat4 view = m_camera->GetViewMatrix();
+	glm::mat4 projection = glm::perspective(glm::radians(scene.GetCameras()[0]->m_ZOOM), (float)m_winWidth / (float)m_winHeight, 0.1f, 2000.0f);
+	glm::mat4 view = scene.GetCameras()[0]->GetViewMatrix();
 	glm::mat4 model = glm::mat4(1.0f);
 	m_geometryShader->UseProgram();
 	m_geometryShader->SetMat4("projMatrix", projection);
 	m_geometryShader->SetMat4("viewMatrix", view);
 
-	RenderScene(*m_geometryShader);
+	RenderScene(*m_geometryShader, scene);
 
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
-void Renderer::ShadowPass()
+void Renderer::ShadowPass(Scene& scene)
 {
 	// Set Shadow Pass
 	float near_plane = 0.1f, far_plane = 2000.0f;
 	glm::mat4 shadowProj = glm::perspective(glm::radians(90.0f), (float)m_shadowWidth / (float)m_shadowHeight, near_plane, far_plane);
 	std::vector<glm::mat4> shadowTransforms;
-	shadowTransforms.push_back(shadowProj * glm::lookAt(m_Lights[0]->GetPosition(), m_Lights[0]->GetPosition() + glm::vec3(1.0f, 0.0f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f)));
-	shadowTransforms.push_back(shadowProj * glm::lookAt(m_Lights[0]->GetPosition(), m_Lights[0]->GetPosition() + glm::vec3(-1.0f, 0.0f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f)));
-	shadowTransforms.push_back(shadowProj * glm::lookAt(m_Lights[0]->GetPosition(), m_Lights[0]->GetPosition() + glm::vec3(0.0f, 1.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f)));
-	shadowTransforms.push_back(shadowProj * glm::lookAt(m_Lights[0]->GetPosition(), m_Lights[0]->GetPosition() + glm::vec3(0.0f, -1.0f, 0.0f), glm::vec3(0.0f, 0.0f, -1.0f)));
-	shadowTransforms.push_back(shadowProj * glm::lookAt(m_Lights[0]->GetPosition(), m_Lights[0]->GetPosition() + glm::vec3(0.0f, 0.0f, 1.0f), glm::vec3(0.0f, -1.0f, 0.0f)));
-	shadowTransforms.push_back(shadowProj * glm::lookAt(m_Lights[0]->GetPosition(), m_Lights[0]->GetPosition() + glm::vec3(0.0f, 0.0f, -1.0f), glm::vec3(0.0f, -1.0f, 0.0f)));
+	shadowTransforms.push_back(shadowProj * glm::lookAt(scene.GetLights()[0]->GetPosition(), scene.GetLights()[0]->GetPosition() + glm::vec3(1.0f, 0.0f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f)));
+	shadowTransforms.push_back(shadowProj * glm::lookAt(scene.GetLights()[0]->GetPosition(), scene.GetLights()[0]->GetPosition() + glm::vec3(-1.0f, 0.0f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f)));
+	shadowTransforms.push_back(shadowProj * glm::lookAt(scene.GetLights()[0]->GetPosition(), scene.GetLights()[0]->GetPosition() + glm::vec3(0.0f, 1.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f)));
+	shadowTransforms.push_back(shadowProj * glm::lookAt(scene.GetLights()[0]->GetPosition(), scene.GetLights()[0]->GetPosition() + glm::vec3(0.0f, -1.0f, 0.0f), glm::vec3(0.0f, 0.0f, -1.0f)));
+	shadowTransforms.push_back(shadowProj * glm::lookAt(scene.GetLights()[0]->GetPosition(), scene.GetLights()[0]->GetPosition() + glm::vec3(0.0f, 0.0f, 1.0f), glm::vec3(0.0f, -1.0f, 0.0f)));
+	shadowTransforms.push_back(shadowProj * glm::lookAt(scene.GetLights()[0]->GetPosition(), scene.GetLights()[0]->GetPosition() + glm::vec3(0.0f, 0.0f, -1.0f), glm::vec3(0.0f, -1.0f, 0.0f)));
 
 	glViewport(0, 0, m_shadowWidth, m_shadowHeight);
 	glBindFramebuffer(GL_FRAMEBUFFER, m_depthMapFBO);
@@ -247,14 +176,14 @@ void Renderer::ShadowPass()
 		m_shadowShader->SetMat4("shadowMatrices[" + std::to_string(i) + "]", shadowTransforms[i]);
 	}
 	m_shadowShader->SetFloat("far_plane", far_plane);
-	m_shadowShader->SetVec3("lightPos", m_Lights[0]->GetPosition());
+	m_shadowShader->SetVec3("lightPos", scene.GetLights()[0]->GetPosition());
 
-	RenderScene(*m_shadowShader);
+	RenderScene(*m_shadowShader, scene);
 
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
-void Renderer::LightPass()
+void Renderer::LightPass(Scene& scene)
 {
 	// Set Light Pass
 	glViewport(0, 0, m_winWidth, m_winHeight);
@@ -264,7 +193,7 @@ void Renderer::LightPass()
 	glActiveTexture(GL_TEXTURE3);
 	glBindTexture(GL_TEXTURE_CUBE_MAP, m_depthCubemap);
 
-	m_lightShader->SetVec3("camPos", m_camera->GetPos());
+	m_lightShader->SetVec3("camPos", scene.GetCameras()[0]->GetPos());
 	m_lightShader->SetFloat("far_plane", 100.0f);
 	m_lightShader->SetFloat("metallic", 0.4f);
 	m_lightShader->SetFloat("roughness", 0.4f);
@@ -275,11 +204,11 @@ void Renderer::LightPass()
 
 	for (unsigned int i = 0; i < 4; i++)
 	{
-		m_lightShader->SetVec3("light[" + std::to_string(i) + "].Position", m_Lights[0]->GetPosition());
-		m_lightShader->SetVec3("light[" + std::to_string(i) + "].Color", m_Lights[0]->GetColor());
+		m_lightShader->SetVec3("light[" + std::to_string(i) + "].Position", scene.GetLights()[0]->GetPosition());
+		m_lightShader->SetVec3("light[" + std::to_string(i) + "].Color", scene.GetLights()[0]->GetColor());
 
 		model = glm::mat4(1.0f);
-		model = glm::translate(model, m_Lights[0]->GetPosition());
+		model = glm::translate(model, scene.GetLights()[0]->GetPosition());
 	}
 
 	RenderQuad();
@@ -287,16 +216,16 @@ void Renderer::LightPass()
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
-void Renderer::RenderScene(Shader& shader)
+void Renderer::RenderScene(Shader& shader, Scene& scene)
 {
 	glm::mat4 model = glm::mat4(1.0f);
 	model = glm::mat4(1.0f);
 	model = glm::translate(model, m_objPos);
 	model = glm::scale(model, glm::vec3(0.5f));
-	for (unsigned int i = 0; i < m_Entities.size(); ++i)
+	for (unsigned int i = 0; i < scene.GetEntities().size(); ++i)
 	{
-		m_Entities[i]->SetTransform(model);
-		m_Entities[i]->Render(shader);
+		scene.GetEntities()[i]->SetTransform(model);
+		scene.GetEntities()[i]->Render(shader);
 	}
 
 	//model = glm::translate(model, m_planePos);
@@ -314,7 +243,7 @@ void Renderer::RenderQuad()
 	glBindVertexArray(0);
 }
 
-void Renderer::processInput(GLFWwindow* window, float deltaTime)
+void Renderer::processInput(GLFWwindow* window, float deltaTime, Scene& scene)
 {
 	float velocity = 2.5f * deltaTime;
 
@@ -323,77 +252,77 @@ void Renderer::processInput(GLFWwindow* window, float deltaTime)
 
 	// KEYBOARD W A S D (Camera Movement)
 	if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
-		m_camera->ProcessKeyBoard(FORWARD, deltaTime);
+		scene.GetCameras()[0]->ProcessKeyBoard(FORWARD, deltaTime);
 	if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
-		m_camera->ProcessKeyBoard(BACKWARD, deltaTime);
+		scene.GetCameras()[0]->ProcessKeyBoard(BACKWARD, deltaTime);
 	if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
-		m_camera->ProcessKeyBoard(LEFT, deltaTime);
+		scene.GetCameras()[0]->ProcessKeyBoard(LEFT, deltaTime);
 	if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
-		m_camera->ProcessKeyBoard(RIGHT, deltaTime);
+		scene.GetCameras()[0]->ProcessKeyBoard(RIGHT, deltaTime);
 
 	// KEYBOARD U H J K (Light Movement)
 	if (glfwGetKey(window, GLFW_KEY_U) == GLFW_PRESS)
 	{
-		for (unsigned int i = 0; i < m_Lights.size(); ++i)
+		for (unsigned int i = 0; i < scene.GetLights().size(); ++i)
 		{
-			float y = m_Lights[i]->GetPositionY();
-			m_Lights[i]->SetPositionY(y += velocity);
+			float y = scene.GetLights()[i]->GetPositionY();
+			scene.GetLights()[i]->SetPositionY(y += velocity);
 		}
 	}
 
 	if (glfwGetKey(window, GLFW_KEY_J) == GLFW_PRESS)
 	{
-		for (unsigned int i = 0; i < m_Lights.size(); ++i)
+		for (unsigned int i = 0; i < scene.GetLights().size(); ++i)
 		{
-			float y = m_Lights[i]->GetPositionY();
-			m_Lights[i]->SetPositionY(y -= velocity);
+			float y = scene.GetLights()[i]->GetPositionY();
+			scene.GetLights()[i]->SetPositionY(y -= velocity);
 		}
 	}
 
 	if (glfwGetKey(window, GLFW_KEY_H) == GLFW_PRESS)
 	{
-		for (unsigned int i = 0; i < m_Lights.size(); ++i)
+		for (unsigned int i = 0; i < scene.GetLights().size(); ++i)
 		{
-			float x = m_Lights[i]->GetPositionX();
-			m_Lights[i]->SetPositionX(x -= velocity);
+			float x = scene.GetLights()[i]->GetPositionX();
+			scene.GetLights()[i]->SetPositionX(x -= velocity);
 		}
 	}
 
 	if (glfwGetKey(window, GLFW_KEY_K) == GLFW_PRESS)
 	{
-		for (unsigned int i = 0; i < m_Lights.size(); ++i)
+		for (unsigned int i = 0; i < scene.GetLights().size(); ++i)
 		{
-			float x = m_Lights[i]->GetPositionX();
-			m_Lights[i]->SetPositionX(x += velocity);
+			float x = scene.GetLights()[i]->GetPositionX();
+			scene.GetLights()[i]->SetPositionX(x += velocity);
 		}
 	}
 
 	// KEYBOARD F N (Light Distance Movement)
 	if (glfwGetKey(window, GLFW_KEY_F) == GLFW_PRESS)
 	{
-		for (unsigned int i = 0; i < m_Lights.size(); ++i)
+		for (unsigned int i = 0; i < scene.GetLights().size(); ++i)
 		{
-			float z = m_Lights[i]->GetPositionZ();
-			m_Lights[i]->SetPositionZ(z += velocity);
+			float z = scene.GetLights()[i]->GetPositionZ();
+			scene.GetLights()[i]->SetPositionZ(z += velocity);
 		}
 	}
 
 	if (glfwGetKey(window, GLFW_KEY_N) == GLFW_PRESS)
 	{
-		for (unsigned int i = 0; i < m_Lights.size(); ++i)
+		for (unsigned int i = 0; i < scene.GetLights().size(); ++i)
 		{
-			float z = m_Lights[i]->GetPositionZ();
-			m_Lights[i]->SetPositionZ(z -= velocity);
+			float z = scene.GetLights()[i]->GetPositionZ();
+			scene.GetLights()[i]->SetPositionZ(z -= velocity);
 		}
 	}
 
 	// Reset Cam and LightPos
 	if (glfwGetKey(window, GLFW_KEY_R) == GLFW_PRESS)
 	{
-		m_camera->SetPos(glm::vec3(0.0f, 0.0f, 5.0f));
+		scene.GetCameras()[0]->SetPos(glm::vec3(0.0f, 0.0f, 5.0f));
 
-		for (unsigned int i = 0; i < m_Lights.size(); ++i)
-			m_Lights[i]->SetPosition(glm::vec3(0.0f, 5.0f, 0.0f));
+		for (unsigned int i = 0; i < scene.GetLights().size(); ++i)
+			scene.GetLights()[i]->SetPosition(glm::vec3(0.0f, 5.0f, 0.0f));
 	}
 
 	// Set Shadow On/Off

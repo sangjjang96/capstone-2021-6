@@ -10,14 +10,17 @@ public:
 	TestScene() :
 		m_mainEntity(nullptr),
 		m_mainLight(nullptr),
-		m_sponza(nullptr)
+		m_Model(nullptr),
+		m_mainCamera(nullptr),
+		Scene()
 	{
 	}
 
-	void Init() override;
+	virtual void Init() override;
 
 private:
 	Entity* m_mainEntity;
 	Light* m_mainLight;
-	Model* m_sponza;
+	Model* m_Model;
+	Camera* m_mainCamera;
 };

@@ -66,7 +66,7 @@ int Application::Run(Scene& scene)
 	glEnable(GL_DEPTH_TEST);
 
 	m_renderer = new Renderer();
-	m_renderer->StartRenderer(m_winWidth, m_winHeight, scene);
+	m_renderer->StartRenderer(m_winWidth, m_winHeight);
 
 	while (!glfwWindowShouldClose(m_window))
 	{
@@ -88,8 +88,8 @@ int Application::Run(Scene& scene)
 			fpsTimeCounter += actualElapsedTime;
 		}
 
-		m_renderer->processInput(m_window, deltaTime);
-		m_renderer->Render();
+		m_renderer->processInput(m_window, deltaTime, scene);
+		m_renderer->Render(scene);
 		glfwSwapBuffers(m_window);
 		glfwPollEvents();
 	}

@@ -1,6 +1,7 @@
 ﻿#include "Scene.h"
 #include "Entity.h"
 #include "Light.h"
+#include "Camera.h"
 
 Scene::~Scene()
 {
@@ -21,6 +22,15 @@ Scene::~Scene()
          light = nullptr;
       }
    }
+
+   for (auto& camera : m_cameras)
+   {
+       if (camera != nullptr)
+       {
+           delete camera;
+           camera = nullptr;
+       }
+   }
 }
 
 Entity& Scene::CreateEntity(const std::string_view name)
@@ -35,4 +45,11 @@ Light& Scene::CreateLight()
    const auto temp = new Light();
    m_lights.push_back(temp);
    return (*temp);
+}
+
+Camera& Scene::CreateCamera()
+{
+    const auto temp = new Camera(glm::vec3(0.0f, 0.0f, 0.0f));
+    m_cameras.push_back(temp);
+    return (*temp);
 }
