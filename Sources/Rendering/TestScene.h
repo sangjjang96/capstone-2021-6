@@ -1,17 +1,14 @@
 #pragma once
 #include "Scene.h"
+#include <glm/glm.hpp>
 
 class Entity;
-class Light;
 class Model;
 class TestScene : public Scene
 {
 public:
 	TestScene() :
-		m_mainEntity(nullptr),
-		m_mainLight(nullptr),
 		m_Model(nullptr),
-		m_mainCamera(nullptr),
 		Scene()
 	{
 	}
@@ -19,8 +16,5 @@ public:
 	virtual void Init() override;
 
 private:
-	Entity* m_mainEntity;
-	Light* m_mainLight;
 	Model* m_Model;
-	Camera* m_mainCamera;
 };

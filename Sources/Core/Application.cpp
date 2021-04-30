@@ -65,6 +65,7 @@ int Application::Run(Scene& scene)
 
 	glEnable(GL_DEPTH_TEST);
 
+	scene.Init();
 	m_renderer = new Renderer();
 	m_renderer->StartRenderer(m_winWidth, m_winHeight);
 

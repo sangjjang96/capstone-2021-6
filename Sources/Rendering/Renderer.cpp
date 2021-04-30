@@ -27,8 +27,6 @@ Renderer::Renderer() :
 	m_entityNum(0),
 	m_lightNum(0),
 
-	m_objPos(0),
-
 	m_bShadows(false),
 
 	m_geometryShader(nullptr),
@@ -80,10 +78,7 @@ void Renderer::StartRenderer(unsigned int width, unsigned int height)
 	m_GBuffer = new GBuffer(width, height);
 	m_GBuffer->Init();
 
-	// Set Objects
-	glm::vec3 objPos = glm::vec3(0.0f, 0.0f, 0.0f);
-	m_objPos = objPos;
-
+	// Set Quad
 	float quadVertices[] = {
 		-1.0f,  1.0f, 0.0f, 0.0f, 1.0f,
 		-1.0f, -1.0f, 0.0f, 0.0f, 0.0f,
@@ -218,22 +213,8 @@ void Renderer::LightPass(Scene& scene)
 
 void Renderer::RenderScene(Shader& shader, Scene& scene)
 {
-	glm::mat4 model = glm::mat4(1.0f);
-	model = glm::mat4(1.0f);
-	model = glm::translate(model, m_objPos);
-	model = glm::scale(model, glm::vec3(0.5f));
 	for (unsigned int i = 0; i < scene.GetEntities().size(); ++i)
-	{
-		scene.GetEntities()[i]->SetTransform(model);
 		scene.GetEntities()[i]->Render(shader);
-	}
-
-	//model = glm::translate(model, m_planePos);
-	//model = glm::scale(model, glm::vec3(1.0f));
-	//shader.SetMat4("modelMatrix", model);
-	//glBindVertexArray(m_planeVAO);
-	//glDrawArrays(GL_TRIANGLES, 0, 6);
-	//glBindVertexArray(0);
 }
 
 void Renderer::RenderQuad()

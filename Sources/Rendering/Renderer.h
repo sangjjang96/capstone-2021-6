@@ -63,8 +63,6 @@ private:
 
 	bool m_bShadows;
 
-	glm::vec3 m_objPos;
-
 	Shader* m_geometryShader;
 	Shader* m_lightShader;
 	Shader* m_shadowShader;
