@@ -52,7 +52,7 @@ private:
 	unsigned int m_quadVBO;
 
 	unsigned int m_depthMapFBO;
-	unsigned int m_depthCubemap;
+	unsigned int m_depthMap;
 
 	unsigned int m_entityNum;
 	unsigned int m_lightNum;

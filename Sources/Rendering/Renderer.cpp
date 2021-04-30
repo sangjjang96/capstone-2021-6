@@ -22,7 +22,7 @@ Renderer::Renderer() :
 	m_quadVBO(0),
 
 	m_depthMapFBO(0),
-	m_depthCubemap(0),
+	m_depthMap(0),
 
 	m_entityNum(0),
 	m_lightNum(0),
@@ -73,7 +73,7 @@ void Renderer::StartRenderer(unsigned int width, unsigned int height)
 
 	m_geometryShader = new Shader("../Resources/Shaders/GeometryPass.vs", "../Resources/Shaders/GeometryPass.fs");
 	m_lightShader = new Shader("../Resources/Shaders/LightPass.vs", "../Resources/Shaders/LightPass.fs");
-	m_shadowShader = new Shader("../Resources/Shaders/Shadow.vs", "../Resources/Shaders/Shadow.fs", "../Resources/Shaders/Shadow.gs");
+	m_shadowShader = new Shader("../Resources/Shaders/Shadow.vs", "../Resources/Shaders/Shadow.fs");
 
 	m_GBuffer = new GBuffer(width, height);
 	m_GBuffer->Init();
@@ -98,26 +98,24 @@ void Renderer::StartRenderer(unsigned int width, unsigned int height)
 	glBindVertexArray(0);
 
 	// Set Shadow
-	const unsigned int shadowWidth = 5120, shadowHeight = 5120;
+	const unsigned int shadowWidth = 4096, shadowHeight = 4096;
 	m_shadowWidth = shadowWidth;
 	m_shadowHeight = shadowHeight;
 
 	glGenFramebuffers(1, &m_depthMapFBO);
 
-	glGenTextures(1, &m_depthCubemap);
-	glBindTexture(GL_TEXTURE_CUBE_MAP, m_depthCubemap);
-	for (unsigned int i = 0; i < 6; ++i)
-	{
-		glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_DEPTH_COMPONENT, m_shadowWidth, m_shadowHeight, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
-	}
-	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+	glGenTextures(1, &m_depthMap);
+	glBindTexture(GL_TEXTURE_2D, m_depthMap);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, m_shadowWidth, m_shadowHeight, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+	float borderColor[] = { 1.0, 1.0, 1.0, 1.0 };
+	glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor);
 
 	glBindFramebuffer(GL_FRAMEBUFFER, m_depthMapFBO);
-	glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, m_depthCubemap, 0);
+	glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, m_depthMap, 0);
 	glDrawBuffer(GL_NONE);
 	glReadBuffer(GL_NONE);
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -156,26 +154,20 @@ void Renderer::GeometryPass(Scene& scene)
 void Renderer::ShadowPass(Scene& scene)
 {
 	// Set Shadow Pass
-	float near_plane = 0.1f, far_plane = 2000.0f;
-	glm::mat4 shadowProj = glm::perspective(glm::radians(90.0f), (float)m_shadowWidth / (float)m_shadowHeight, near_plane, far_plane);
-	std::vector<glm::mat4> shadowTransforms;
-	shadowTransforms.push_back(shadowProj * glm::lookAt(scene.GetLights()[0]->GetPosition(), scene.GetLights()[0]->GetPosition() + glm::vec3(1.0f, 0.0f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f)));
-	shadowTransforms.push_back(shadowProj * glm::lookAt(scene.GetLights()[0]->GetPosition(), scene.GetLights()[0]->GetPosition() + glm::vec3(-1.0f, 0.0f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f)));
-	shadowTransforms.push_back(shadowProj * glm::lookAt(scene.GetLights()[0]->GetPosition(), scene.GetLights()[0]->GetPosition() + glm::vec3(0.0f, 1.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f)));
-	shadowTransforms.push_back(shadowProj * glm::lookAt(scene.GetLights()[0]->GetPosition(), scene.GetLights()[0]->GetPosition() + glm::vec3(0.0f, -1.0f, 0.0f), glm::vec3(0.0f, 0.0f, -1.0f)));
-	shadowTransforms.push_back(shadowProj * glm::lookAt(scene.GetLights()[0]->GetPosition(), scene.GetLights()[0]->GetPosition() + glm::vec3(0.0f, 0.0f, 1.0f), glm::vec3(0.0f, -1.0f, 0.0f)));
-	shadowTransforms.push_back(shadowProj * glm::lookAt(scene.GetLights()[0]->GetPosition(), scene.GetLights()[0]->GetPosition() + glm::vec3(0.0f, 0.0f, -1.0f), glm::vec3(0.0f, -1.0f, 0.0f)));
+	glm::mat4 lightProjection, lightView;
+	glm::mat4 lightSpaceMatrix;
+	float near_plane = 0.1f, far_plane = 100.0f;
+
+	lightProjection = glm::ortho(-1.0f, 1.0f, -1.0f, 1.0f, near_plane, far_plane);
+	lightView = glm::lookAt(scene.GetLights()[0]->GetPosition(), glm::vec3(0.0f), glm::vec3(0.0, 1.0, 0.0));
+	lightSpaceMatrix = lightProjection * lightView;
+
+	m_shadowShader->UseProgram();
+	m_shadowShader->SetMat4("lightSpaceMatrix", lightSpaceMatrix);
 
 	glViewport(0, 0, m_shadowWidth, m_shadowHeight);
 	glBindFramebuffer(GL_FRAMEBUFFER, m_depthMapFBO);
 	glClear(GL_DEPTH_BUFFER_BIT);
-	m_shadowShader->UseProgram();
-	for (unsigned int i = 0; i < 6; ++i)
-	{
-		m_shadowShader->SetMat4("shadowMatrices[" + std::to_string(i) + "]", shadowTransforms[i]);
-	}
-	m_shadowShader->SetFloat("far_plane", far_plane);
-	m_shadowShader->SetVec3("lightPos", scene.GetLights()[0]->GetPosition());
 
 	for (unsigned int i = 0; i < scene.GetEntities().size(); ++i)
 		scene.GetEntities()[i]->Render(*m_shadowShader);
@@ -185,13 +177,22 @@ void Renderer::ShadowPass(Scene& scene)
 
 void Renderer::LightPass(Scene& scene)
 {
+	//Set Shadow Parameters
+	glm::mat4 lightProjection, lightView;
+	glm::mat4 lightSpaceMatrix;
+	float near_plane = 0.1f, far_plane = 100.0f;
+
+	lightProjection = glm::ortho(-1.0f, 1.0f, -1.0f, 1.0f, near_plane, far_plane);
+	lightView = glm::lookAt(scene.GetLights()[0]->GetPosition(), glm::vec3(0.0f), glm::vec3(0.0, 1.0, 0.0));
+	lightSpaceMatrix = lightProjection * lightView;
+
 	// Set Light Pass
 	glViewport(0, 0, m_winWidth, m_winHeight);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	m_lightShader->UseProgram();
 	m_GBuffer->SetTexture();
 	glActiveTexture(GL_TEXTURE3);
-	glBindTexture(GL_TEXTURE_CUBE_MAP, m_depthCubemap);
+	glBindTexture(GL_TEXTURE_2D, m_depthMap);
 
 	m_lightShader->SetVec3("camPos", scene.GetCameras()[0]->GetPos());
 	m_lightShader->SetFloat("far_plane", 100.0f);
@@ -199,6 +200,7 @@ void Renderer::LightPass(Scene& scene)
 	m_lightShader->SetFloat("roughness", 0.4f);
 	m_lightShader->SetFloat("ao", 1.0f);
 	m_lightShader->SetBool("b_shadows", m_bShadows);
+	m_lightShader->SetMat4("lightSpaceMatrix", lightSpaceMatrix);
 
 	glm::mat4 model = glm::mat4(1.0f);
 

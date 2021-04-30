@@ -13,10 +13,10 @@
 void TestScene::Init()
 {
 	Scene* scene = this;
-	scene->CreateEntity("sponza");
-	scene->CreateEntity("backpack");
-	scene->CreateLight();
-	scene->CreateCamera();
+	m_Sponza = &scene->CreateEntity("sponza");
+	m_Backpack = &scene->CreateEntity("backpack");
+	m_mainLight = &scene->CreateLight();
+	m_mainCamera = &scene->CreateCamera();
 
 	glm::mat4 model = glm::mat4(1.0f);
 	model = glm::mat4(1.0f);
@@ -24,18 +24,18 @@ void TestScene::Init()
 	model = glm::scale(model, glm::vec3(0.09f));
 
 	m_Model = new Model("../Resources/resources/objects/Sponza-master/sponza.obj");
-	scene->GetEntities()[0]->SetModel(m_Model);
-	scene->GetEntities()[0]->SetTransform(model);
+	m_Sponza->SetModel(m_Model);
+	m_Sponza->SetTransform(model);
 
 	model = glm::mat4(1.0f);
 	model = glm::translate(model, glm::vec3(0.0f, 3.0f, 0.0f));
 	model = glm::scale(model, glm::vec3(0.5f));
 
 	m_Model = new Model("../Resources/resources/objects/backpack/backpack.obj");
-	scene->GetEntities()[1]->SetModel(m_Model);
-	scene->GetEntities()[1]->SetTransform(model);
+	m_Backpack->SetModel(m_Model);
+	m_Backpack->SetTransform(model);
 
-	scene->GetLights()[0]->SetPosition(glm::vec3(0.0f, 50.0f, 0.0f));
-	scene->GetLights()[0]->SetColor(glm::vec3(300.0f, 190.0f, 100.0f));
-	scene->GetCameras()[0]->SetPos(glm::vec3(0.0f, 3.0f, 5.0f));
+	m_mainLight->SetPosition(glm::vec3(0.0f, 1000.0f, 0.0f));
+	m_mainLight->SetColor(glm::vec3(300.0f, 190.0f, 100.0f));
+	m_mainCamera->SetPos(glm::vec3(0.0f, 3.0f, 5.0f));
 }

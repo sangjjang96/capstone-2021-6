@@ -7,7 +7,7 @@ uniform sampler2D posData;
 uniform sampler2D normalData;
 uniform sampler2D albedoData;
 
-uniform samplerCube depthMap;
+uniform sampler2D depthMap;
 
 uniform float far_plane;
 
@@ -16,6 +16,8 @@ uniform float roughness;
 uniform float ao;
 
 uniform bool b_shadows;
+
+uniform mat4 lightSpaceMatrix;
 
 struct Light {
     vec3 Position;
@@ -29,34 +31,34 @@ uniform vec3 camPos;
 
 const float PI = 3.14159265359;
 
-vec3 gridSamplingDisk[20] = vec3[]
-(
-   vec3(1, 1,  1), vec3( 1, -1,  1), vec3(-1, -1,  1), vec3(-1, 1,  1), 
-   vec3(1, 1, -1), vec3( 1, -1, -1), vec3(-1, -1, -1), vec3(-1, 1, -1),
-   vec3(1, 1,  0), vec3( 1, -1,  0), vec3(-1, -1,  0), vec3(-1, 1,  0),
-   vec3(1, 0,  1), vec3(-1,  0,  1), vec3( 1,  0, -1), vec3(-1, 0, -1),
-   vec3(0, 1,  1), vec3( 0, -1,  1), vec3( 0, -1, -1), vec3( 0, 1, -1)
-);
-
-float ShadowCalculation(vec3 fragPos)
+float ShadowCalculation(vec4 fragPosLightSpace)
 {
-    vec3 fragToLight = fragPos - light[0].Position;
+    vec3 projCoords = fragPosLightSpace.xyz / fragPosLightSpace.w;
 
-    float currentDepth = length(fragToLight);
+    projCoords = projCoords * 0.5 + 0.5;
+
+    float closestDepth = texture(depthMap, projCoords.xy).r;
+    float currentDepth = projCoords.z;
+
+    vec3 normal = normalize(texture(normalData, TexCoords).xyz);
+    vec3 lightDir = normalize(light[0].Position - texture(posData, TexCoords).xyz);
+    float bias = max(0.05 * (1.0 - dot(normal, lightDir)), 0.005);
 
     float shadow = 0.0;
-    float bias = 0.15;
-    int samples = 20;
-    float viewDistance = length(camPos - fragPos);
-    float diskRadius = (1.0 + (viewDistance / far_plane)) / 25.0;
-    for(int i = 0; i < samples; ++i)
+    vec2 texelSize = 1.0 / textureSize(depthMap, 0);
+    for(int x = -1; x <= 1; ++x)
     {
-        float closestDepth = texture(depthMap, fragToLight + gridSamplingDisk[i] * diskRadius).r;
-        closestDepth *= far_plane;  
-        if(currentDepth - bias > closestDepth)
-            shadow += 1.0;
+        for(int y = -1; y <= 1; ++y)
+        {
+            float pcfDepth = texture(depthMap, projCoords.xy + vec2(x, y) * texelSize).r; 
+            shadow += currentDepth - bias > pcfDepth  ? 1.0 : 0.0;        
+        }    
     }
-    shadow /= float(samples);
+
+    shadow /= 9.0;
+
+    if (projCoords.z > 1.0)
+        shadow = 0.0;
 
     return shadow;
 }
@@ -108,6 +110,8 @@ void main()
     vec3 Albedo = texture(albedoData, TexCoords).rgb;
     float Specular = texture(albedoData, TexCoords).a;
 
+    vec4 FragPosLightSpace = lightSpaceMatrix * vec4(FragPos, 1.0);
+
     vec3 N = normalize(Normal);
     vec3 V = normalize(camPos - FragPos);
 
@@ -116,7 +120,7 @@ void main()
 
     vec3 Lo = vec3(0.0);
 
-    float shadow = b_shadows ? ShadowCalculation(FragPos) : 0.0;
+    float shadow = b_shadows ? ShadowCalculation(FragPosLightSpace) : 0.0;
 
     for(int i = 0; i < 4; ++i)
     {
