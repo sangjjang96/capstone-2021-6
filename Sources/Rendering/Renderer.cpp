@@ -280,7 +280,7 @@ void Renderer::processInput(GLFWwindow* window, float deltaTime, Scene& scene)
 		for (unsigned int i = 0; i < scene.GetLights().size(); ++i)
 		{
 			float z = scene.GetLights()[i]->GetPositionZ();
-			scene.GetLights()[i]->SetPositionZ(z += velocity);
+			scene.GetLights()[i]->SetPositionZ(z -= velocity);
 		}
 	}
 
@@ -289,7 +289,7 @@ void Renderer::processInput(GLFWwindow* window, float deltaTime, Scene& scene)
 		for (unsigned int i = 0; i < scene.GetLights().size(); ++i)
 		{
 			float z = scene.GetLights()[i]->GetPositionZ();
-			scene.GetLights()[i]->SetPositionZ(z -= velocity);
+			scene.GetLights()[i]->SetPositionZ(z += velocity);
 		}
 	}
 

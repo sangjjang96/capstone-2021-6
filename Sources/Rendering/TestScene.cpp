@@ -35,7 +35,7 @@ void TestScene::Init()
 	m_Backpack->SetModel(m_Model);
 	m_Backpack->SetTransform(model);
 
-	m_mainLight->SetPosition(glm::vec3(0.0f, 1000.0f, 0.0f));
+	m_mainLight->SetPosition(glm::vec3(0.0f, 50.0f, 0.0f));
 	m_mainLight->SetColor(glm::vec3(300.0f, 190.0f, 100.0f));
 	m_mainCamera->SetPos(glm::vec3(0.0f, 3.0f, 5.0f));
 }
