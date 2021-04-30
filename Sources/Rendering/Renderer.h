@@ -33,10 +33,6 @@ public:
 
 	void LightPass(Scene& scene);
 
-	void RenderScene(Shader& shader, Scene& scene);
-
-	void RenderQuad();
-
 	void processInput(GLFWwindow* window, float deltaTime, Scene& scene);
 
 	void ClearBackBuffer()

@@ -35,7 +35,7 @@ void TestScene::Init()
 	scene->GetEntities()[1]->SetModel(m_Model);
 	scene->GetEntities()[1]->SetTransform(model);
 
-	scene->GetLights()[0]->SetPosition(glm::vec3(0.0f, 200.0f, 0.0f));
+	scene->GetLights()[0]->SetPosition(glm::vec3(0.0f, 50.0f, 0.0f));
 	scene->GetLights()[0]->SetColor(glm::vec3(300.0f, 190.0f, 100.0f));
 	scene->GetCameras()[0]->SetPos(glm::vec3(0.0f, 3.0f, 5.0f));
 }

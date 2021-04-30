@@ -137,14 +137,18 @@ void Renderer::GeometryPass(Scene& scene)
 
 	m_GBuffer->SetFrameBuffer();
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	glm::mat4 projection = glm::perspective(glm::radians(scene.GetCameras()[0]->m_ZOOM), (float)m_winWidth / (float)m_winHeight, 0.1f, 2000.0f);
-	glm::mat4 view = scene.GetCameras()[0]->GetViewMatrix();
-	glm::mat4 model = glm::mat4(1.0f);
-	m_geometryShader->UseProgram();
-	m_geometryShader->SetMat4("projMatrix", projection);
-	m_geometryShader->SetMat4("viewMatrix", view);
 
-	RenderScene(*m_geometryShader, scene);
+	for (unsigned int i = 0; i < scene.GetEntities().size(); ++i)
+	{
+		glm::mat4 projection = glm::perspective(glm::radians(scene.GetCameras()[0]->m_ZOOM), (float)m_winWidth / (float)m_winHeight, 0.1f, 2000.0f);
+		glm::mat4 view = scene.GetCameras()[0]->GetViewMatrix();
+		glm::mat4 model = glm::mat4(1.0f);
+		m_geometryShader->UseProgram();
+		m_geometryShader->SetMat4("projMatrix", projection);
+		m_geometryShader->SetMat4("viewMatrix", view);
+
+		scene.GetEntities()[i]->Render(*m_geometryShader);
+	}
 
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
@@ -173,7 +177,8 @@ void Renderer::ShadowPass(Scene& scene)
 	m_shadowShader->SetFloat("far_plane", far_plane);
 	m_shadowShader->SetVec3("lightPos", scene.GetLights()[0]->GetPosition());
 
-	RenderScene(*m_shadowShader, scene);
+	for (unsigned int i = 0; i < scene.GetEntities().size(); ++i)
+		scene.GetEntities()[i]->Render(*m_shadowShader);
 
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
@@ -206,22 +211,11 @@ void Renderer::LightPass(Scene& scene)
 		model = glm::translate(model, scene.GetLights()[0]->GetPosition());
 	}
 
-	RenderQuad();
-
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
-}
-
-void Renderer::RenderScene(Shader& shader, Scene& scene)
-{
-	for (unsigned int i = 0; i < scene.GetEntities().size(); ++i)
-		scene.GetEntities()[i]->Render(shader);
-}
-
-void Renderer::RenderQuad()
-{
 	glBindVertexArray(m_quadVAO);
 	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 	glBindVertexArray(0);
+
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
 void Renderer::processInput(GLFWwindow* window, float deltaTime, Scene& scene)
